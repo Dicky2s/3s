@@ -1,0 +1,33 @@
+---
+- name: install
+  yum:
+    name: postgresql-{{ postgres_version }}
+    state: present
+
+- name: Create PostgreSQL user
+  user:
+    name: "{{ postgresql_user }}"
+    comment: "PostgreSQL User"
+    home: "/var/lib/postgresql"
+    shell: "/bin/bash"
+    createhome: no
+    
+- name: Copy pg_hba.conf
+  template:
+    src: pg_hba.conf.j2
+    dest: "{{ postgresql_pgdata_default }}/pg_hba.conf"
+    owner: "{{ postgresql_user}}"
+    group: "{{ postgresql_user }}"
+    mode: 0400
+    backup: true
+  notify: Reload PostgreSQL
+
+- name: Copy postgresql.conf for additional configurations
+  template:
+    src: postgresql.conf.j2
+    dest: "{{ postgresql_conf_dir_default }}/postgresql.conf"
+    owner: "{{ postgresql_user }}"
+    group: "{{ postgresql_user}}"
+    mode: 0400
+    backup: true
+  notify: Reload PostgreSQL

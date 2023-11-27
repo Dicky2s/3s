@@ -1,0 +1,17 @@
+---
+- name: Backup PostgreSQL Database
+  hosts: psql
+  become: true
+
+  tasks:
+    - name: Create backup directory
+      ansible.builtin.file:
+        path: "/path/to/backup/directory"
+        state: directory
+        owner: "{{ postgresql_user }}"
+        group: "{{ postgresql_user }}"
+        mode: 0755
+
+    - name: Run pg_dump for backup
+      ansible.builtin.shell:
+        cmd: "pg_dump -U {{ postgresql_user }} -h localhost -d {{ postgresql_database }} > /path/to/backup/directory/{{ postgresql_database }}_backup_{{ ansible_date_time.date }}.sql"
