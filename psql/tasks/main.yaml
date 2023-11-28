@@ -1,33 +1,69 @@
----
-- name: install
-  yum:
+# tasks/main.yml
+- name: Install required packages
+  apt:
+    name:
+      - gnupg2
+      - wget
+      - vim
+    state: present
+
+- name: Add PostgreSQL repository
+  shell: sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+
+- name: Add PostgreSQL GPG key
+  shell: curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg
+
+- name: Update APT cache
+  apt:
+    update_cache: yes
+
+- name: Install PostgreSQL
+  apt:
     name: postgresql-{{ postgres_version }}
+    state: present
+
+- name: Install PostgreSQL Contrib
+  apt:
+    name: postgresql-contrib-{{ postgres_version }}
     state: present
 
 - name: Create PostgreSQL user
   user:
-    name: "{{ postgresql_user }}"
+    name: "{{ postgres_user }}"
     comment: "PostgreSQL User"
     home: "/var/lib/postgresql"
     shell: "/bin/bash"
     createhome: no
-    
-- name: Copy pg_hba.conf
-  template:
-    src: pg_hba.conf.j2
-    dest: "{{ postgresql_pgdata_default }}/pg_hba.conf"
-    owner: "{{ postgresql_user}}"
-    group: "{{ postgresql_user }}"
-    mode: 0400
-    backup: true
-  notify: Reload PostgreSQL
 
-- name: Copy postgresql.conf for additional configurations
+- name: Start PostgreSQL service
+  systemd:
+    name: postgresql
+    state: started
+    enabled: yes
+    
+- name: Replace postgresql.conf 
   template:
     src: postgresql.conf.j2
-    dest: "{{ postgresql_conf_dir_default }}/postgresql.conf"
-    owner: "{{ postgresql_user }}"
-    group: "{{ postgresql_user}}"
-    mode: 0400
-    backup: true
+    dest: "/etc/postgresql/16/main/postgresql.conf"
+    owner: "{{ postgres_user }}"
+    group: "{{ postgres_user }}"
+    mode: 0640
+    force: yes  
   notify: Reload PostgreSQL
+
+- name: Modify pg_hba.conf 
+  become: true
+  ansible.builtin.lineinfile:
+    path: "/etc/postgresql/{{ postgres_version }}/main/pg_hba.conf"
+    line: "host all all 0.0.0.0/0 md5"
+    insertbefore: '^# IPv4 local connections'
+    state: present
+
+- name: Modify pg_hba.conf
+  become: true
+  ansible.builtin.lineinfile:
+    path: "/etc/postgresql/{{ postgres_version }}/main/pg_hba.conf"
+    line: "local all all trust"
+    insertbefore: '^# "local" is for Unix domain socket connections only'
+    state: present
+    notify: Reload PostgreSQL

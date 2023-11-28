@@ -1,2 +1,8 @@
-postgresql_pgdata_default: /var/lib/postgresql/{{ postgresql_version }}/main
-postgresql_conf_dir_default: /etc/postgresql/{{ postgresql_version }}/main
+postgresql_pgdata_default: /etc/postgresql/{{ postgres_version }}/main
+postgresql_conf_dir_default: /etc/postgresql/{{ postgres_version }}/main
+postgres_version: "16"
+postgres_listen_address: "*"
+postgres_port: "5432"
+postgres_database: "postgres"
+postgres_user: "postgres"
+postgres_password: "postgres"
